@@ -613,6 +613,11 @@ namespace FCG
                 linkedNodeIds = new List<int>()
             });
 
+            if (generateHighways && satelliteCenters != null && satelliteCenters.Count > 0)
+            {
+                Debug.Log("FCG: Highway connections enabled for " + satelliteCenters.Count + " satellite city links.");
+            }
+
             if (satelliteCenters != null)
             {
                 for (int i = 0; i < satelliteCenters.Count; i++)
@@ -782,6 +787,10 @@ namespace FCG
         }
 
         private Material debugLineMaterial;
+        private Material highwayAsphaltMaterial;
+        private Material highwayShoulderMaterial;
+        private Material highwayLaneMaterial;
+        private Material highwayDividerMaterial;
 
         private Material GetDebugLineMaterial()
         {
@@ -1072,8 +1081,9 @@ namespace FCG
             if (distance < 1f)
                 return 0;
 
-            float step = (connectionStepOverride > 1f) ? connectionStepOverride : Mathf.Max(250f, highwayWidth * 2f);
+            float step = (connectionStepOverride > 1f) ? connectionStepOverride : Mathf.Max(180f, highwayWidth * 1.5f);
             int segments = Mathf.Max(1, Mathf.CeilToInt(distance / step));
+            segments = Mathf.Clamp(segments, 1, 18);
 
             for (int i = 0; i < segments; i++)
             {
@@ -1099,12 +1109,17 @@ namespace FCG
             float halfWidth = highwayWidth * 0.5f;
             float shoulderWidth = Mathf.Max(1.5f, highwayWidth * 0.12f);
             float laneMarkerWidth = Mathf.Max(0.18f, highwayWidth * 0.04f);
+            float asphaltHeight = 0.02f + Mathf.Clamp01(highwayThickness) * 0.08f;
+            float shoulderHeight = asphaltHeight * 0.35f;
 
-            CreateHighwayMesh("Highway-Asphalt", center, rotation, parent, halfLength, halfWidth, 0.02f, new Color(0.19f, 0.20f, 0.23f, 1f));
-            CreateHighwayMesh("Highway-Shoulder", center, rotation, parent, halfLength + 0.02f, halfWidth + shoulderWidth, 0.005f, new Color(0.25f, 0.26f, 0.29f, 1f));
+            CreateHighwayMesh("Highway-Asphalt", center, rotation, parent, halfLength, halfWidth, asphaltHeight, new Color(0.19f, 0.20f, 0.23f, 1f));
+            CreateHighwayMesh("Highway-Shoulder", center, rotation, parent, halfLength + 0.02f, halfWidth + shoulderWidth, shoulderHeight, new Color(0.25f, 0.26f, 0.29f, 1f));
 
-            CreateLaneMarker(center, rotation, parent, halfLength - 0.5f, laneMarkerWidth, 0.03f, new Color(1f, 1f, 1f, 1f));
-            CreateLaneMarker(center, rotation, parent, halfLength - 1.4f, laneMarkerWidth, 0.03f, new Color(1f, 1f, 1f, 1f));
+            if (delta.magnitude >= 20f)
+            {
+                CreateLaneMarker(center, rotation, parent, halfLength - 0.5f, laneMarkerWidth, asphaltHeight + 0.01f, new Color(1f, 1f, 1f, 1f));
+                CreateLaneMarker(center, rotation, parent, halfLength - 1.4f, laneMarkerWidth, asphaltHeight + 0.01f, new Color(1f, 1f, 1f, 1f));
+            }
 
             GameObject divider = new GameObject("Highway-Divider");
             divider.transform.SetParent(parent, false);
@@ -1132,9 +1147,9 @@ namespace FCG
             dividerMesh.RecalculateBounds();
             dividerFilter.sharedMesh = dividerMesh;
 
-            Material dividerMaterial = new Material(Shader.Find("Sprites/Default"));
-            dividerMaterial.color = new Color(0.92f, 0.92f, 0.92f, 1f);
-            dividerRenderer.sharedMaterial = dividerMaterial;
+            if (!highwayDividerMaterial)
+                highwayDividerMaterial = GetHighwayDividerMaterial();
+            dividerRenderer.sharedMaterial = highwayDividerMaterial;
         }
 
         private void CreateHighwayMesh(string name, Vector3 center, Quaternion rotation, Transform parent, float halfLength, float halfWidth, float height, Color color)
@@ -1165,9 +1180,56 @@ namespace FCG
             mesh.RecalculateBounds();
             filter.sharedMesh = mesh;
 
-            Material material = new Material(Shader.Find("Standard"));
+            Material material = (name.Contains("Shoulder")) ? GetHighwayShoulderMaterial() : GetHighwayAsphaltMaterial();
             material.color = color;
             renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        private Material GetHighwayAsphaltMaterial()
+        {
+            if (!highwayAsphaltMaterial)
+            {
+                Shader shader = Shader.Find("Standard");
+                highwayAsphaltMaterial = shader ? new Material(shader) : new Material(Shader.Find("Sprites/Default"));
+                highwayAsphaltMaterial.name = "FCG-Highway-Asphalt";
+            }
+            return highwayAsphaltMaterial;
+        }
+
+        private Material GetHighwayShoulderMaterial()
+        {
+            if (!highwayShoulderMaterial)
+            {
+                Shader shader = Shader.Find("Standard");
+                highwayShoulderMaterial = shader ? new Material(shader) : new Material(Shader.Find("Sprites/Default"));
+                highwayShoulderMaterial.name = "FCG-Highway-Shoulder";
+            }
+            return highwayShoulderMaterial;
+        }
+
+        private Material GetHighwayLaneMaterial()
+        {
+            if (!highwayLaneMaterial)
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                highwayLaneMaterial = shader ? new Material(shader) : new Material(Shader.Find("Standard"));
+                highwayLaneMaterial.name = "FCG-Highway-Lane";
+            }
+            return highwayLaneMaterial;
+        }
+
+        private Material GetHighwayDividerMaterial()
+        {
+            if (!highwayDividerMaterial)
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                highwayDividerMaterial = shader ? new Material(shader) : new Material(Shader.Find("Standard"));
+                highwayDividerMaterial.name = "FCG-Highway-Divider";
+                highwayDividerMaterial.color = new Color(0.92f, 0.92f, 0.92f, 1f);
+            }
+            return highwayDividerMaterial;
         }
 
         private void CreateLaneMarker(Vector3 center, Quaternion rotation, Transform parent, float halfLength, float markWidth, float height, Color color)
@@ -1198,9 +1260,10 @@ namespace FCG
             mesh.RecalculateBounds();
             filter.sharedMesh = mesh;
 
-            Material material = new Material(Shader.Find("Sprites/Default"));
-            material.color = color;
-            renderer.sharedMaterial = material;
+            if (!highwayLaneMaterial)
+                highwayLaneMaterial = GetHighwayLaneMaterial();
+            highwayLaneMaterial.color = color;
+            renderer.sharedMaterial = highwayLaneMaterial;
         }
 
         private string BuildEdgeKey(int a, int b)
