@@ -58,6 +58,9 @@ public class FCityGenerator : EditorWindow
         public bool createCityAnchors = true;
         public bool createConnectionDebugLines = false;
         public float connectionDebugLineHeight = 3f;
+        public bool generateHighways = true;
+        public float highwayWidth = 18f;
+        public float highwayThickness = 0.2f;
         public bool useSatteliteSeed = false;
         public int satteliteSeed = 12345;
         public float randomSatelliteMinX = -1000f;
@@ -97,6 +100,9 @@ public class FCityGenerator : EditorWindow
     private bool createCityAnchors = true;
     private bool createConnectionDebugLines = false;
     private float connectionDebugLineHeight = 3f;
+    private bool generateHighways = true;
+    private float highwayWidth = 18f;
+    private float highwayThickness = 0.2f;
     private bool useSatteliteSeed = false;
     private int satteliteSeed = 12345;
     private float randomSatelliteMinX = -1000f;
@@ -222,6 +228,9 @@ public class FCityGenerator : EditorWindow
         state.createCityAnchors = createCityAnchors;
         state.createConnectionDebugLines = createConnectionDebugLines;
         state.connectionDebugLineHeight = connectionDebugLineHeight;
+        state.generateHighways = generateHighways;
+        state.highwayWidth = highwayWidth;
+        state.highwayThickness = highwayThickness;
         state.useSatteliteSeed = useSatteliteSeed;
         state.satteliteSeed = satteliteSeed;
         state.randomSatelliteMinX = randomSatelliteMinX;
@@ -267,6 +276,9 @@ public class FCityGenerator : EditorWindow
         createCityAnchors = state.createCityAnchors;
         createConnectionDebugLines = state.createConnectionDebugLines;
         connectionDebugLineHeight = Mathf.Clamp(state.connectionDebugLineHeight, 0f, 20f);
+        generateHighways = state.generateHighways;
+        highwayWidth = Mathf.Clamp(state.highwayWidth, 8f, 40f);
+        highwayThickness = Mathf.Clamp(state.highwayThickness, 0.05f, 1f);
         useSatteliteSeed = state.useSatteliteSeed;
         satteliteSeed = state.satteliteSeed;
         randomSatelliteMinX = state.randomSatelliteMinX;
@@ -407,6 +419,9 @@ public class FCityGenerator : EditorWindow
         profile.createCityAnchors = createCityAnchors;
         profile.createConnectionDebugLines = createConnectionDebugLines;
         profile.connectionDebugLineHeight = connectionDebugLineHeight;
+        profile.generateHighways = generateHighways;
+        profile.highwayWidth = highwayWidth;
+        profile.highwayThickness = highwayThickness;
         profile.randomSatelliteLayout = satelliteLayoutMode == SatelliteLayoutMode.Random;
         profile.useSatelliteSeed = useSatteliteSeed;
         profile.satelliteSeed = satteliteSeed;
@@ -451,6 +466,9 @@ public class FCityGenerator : EditorWindow
         createCityAnchors = activeProfile.createCityAnchors;
         createConnectionDebugLines = activeProfile.createConnectionDebugLines;
         connectionDebugLineHeight = Mathf.Clamp(activeProfile.connectionDebugLineHeight, 0f, 20f);
+        generateHighways = activeProfile.generateHighways;
+        highwayWidth = Mathf.Clamp(activeProfile.highwayWidth, 8f, 40f);
+        highwayThickness = Mathf.Clamp(activeProfile.highwayThickness, 0.05f, 1f);
         useSatteliteSeed = activeProfile.useSatelliteSeed;
         satteliteSeed = activeProfile.satelliteSeed;
         randomSatelliteMinX = activeProfile.randomSatelliteMin.x;
@@ -509,6 +527,9 @@ public class FCityGenerator : EditorWindow
         activeProfile.createCityAnchors = createCityAnchors;
         activeProfile.createConnectionDebugLines = createConnectionDebugLines;
         activeProfile.connectionDebugLineHeight = connectionDebugLineHeight;
+        activeProfile.generateHighways = generateHighways;
+        activeProfile.highwayWidth = highwayWidth;
+        activeProfile.highwayThickness = highwayThickness;
         activeProfile.randomSatelliteLayout = satelliteLayoutMode == SatelliteLayoutMode.Random;
         activeProfile.useSatelliteSeed = useSatteliteSeed;
         activeProfile.satelliteSeed = satteliteSeed;
@@ -746,7 +767,10 @@ public class FCityGenerator : EditorWindow
             satelliteConnectionStep,
             createCityAnchors,
             createConnectionDebugLines,
-            connectionDebugLineHeight);
+            connectionDebugLineHeight,
+            generateHighways,
+            highwayWidth,
+            highwayThickness);
 
         generationStatus = cityGenerator.GetLastGenerationSummary();
 
@@ -949,6 +973,12 @@ public class FCityGenerator : EditorWindow
             if (satelliteConnectionStep < 0f) satelliteConnectionStep = 0f;
             createCityAnchors = GUILayout.Toggle(createCityAnchors, "Create City Anchors", GUILayout.Width(240));
             createConnectionDebugLines = GUILayout.Toggle(createConnectionDebugLines, "Draw Network Debug Lines", GUILayout.Width(240));
+            generateHighways = GUILayout.Toggle(generateHighways, "Generate Highways", GUILayout.Width(240));
+            if (generateHighways)
+            {
+                highwayWidth = EditorGUILayout.Slider("Highway Width", highwayWidth, 8f, 40f);
+                highwayThickness = EditorGUILayout.Slider("Highway Thickness", highwayThickness, 0.05f, 1f);
+            }
             if (createConnectionDebugLines)
                 connectionDebugLineHeight = EditorGUILayout.Slider("Debug Line Height", connectionDebugLineHeight, 0f, 20f);
 

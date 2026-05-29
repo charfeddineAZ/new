@@ -48,6 +48,11 @@ public class RunTimeSample : MonoBehaviour
     [Range(0f, 20f)] public float connectionDebugLineHeight = 3f;
     [Range(0f,1f)] public float satelliteBuildingDensity = 1f;
 
+    [Header("Highways")]
+    public bool generateHighways = true;
+    [Range(8f, 40f)] public float highwayWidth = 18f;
+    [Range(0.05f, 1f)] public float highwayThickness = 0.2f;
+
     [Header("Buildings")]
     [SerializeField] private bool withDownTownArea = true;
     [Range(50, 200)] public float downTownSize = 100;
@@ -147,6 +152,9 @@ public class RunTimeSample : MonoBehaviour
         request.createConnectionDebugLines = createConnectionDebugLines;
         request.connectionDebugLineHeight = connectionDebugLineHeight;
         request.satelliteBuildingDensity = satelliteBuildingDensity;
+        request.generateHighways = generateHighways;
+        request.highwayWidth = highwayWidth;
+        request.highwayThickness = highwayThickness;
         request.Normalize();
     }
 
@@ -189,6 +197,9 @@ public class RunTimeSample : MonoBehaviour
         createCityAnchors = profile.createCityAnchors;
         createConnectionDebugLines = profile.createConnectionDebugLines;
         connectionDebugLineHeight = Mathf.Clamp(profile.connectionDebugLineHeight, 0f, 20f);
+        generateHighways = profile.generateHighways;
+        highwayWidth = Mathf.Clamp(profile.highwayWidth, 8f, 40f);
+        highwayThickness = Mathf.Clamp(profile.highwayThickness, 0.05f, 1f);
 
         customSatelliteOffsets = new List<Vector2>();
         if (profile.customSatelliteOffsets != null)
@@ -285,7 +296,10 @@ public class RunTimeSample : MonoBehaviour
                 satelliteConnectionStep,
                 createCityAnchors,
                 createConnectionDebugLines,
-                connectionDebugLineHeight);
+                connectionDebugLineHeight,
+                generateHighways,
+                highwayWidth,
+                highwayThickness);
         }
     }
 

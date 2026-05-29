@@ -321,7 +321,10 @@ namespace FCG
                 request.connectionStepOverride,
                 request.createCityAnchors,
                 request.createConnectionDebugLines,
-                request.connectionDebugLineHeight);
+                request.connectionDebugLineHeight,
+                request.generateHighways,
+                request.highwayWidth,
+                request.highwayThickness);
         }
 
         public void GenerateCity(
@@ -357,7 +360,10 @@ namespace FCG
             float connectionStepOverride = 0f,
             bool createCityAnchors = true,
             bool createConnectionDebugLines = false,
-            float connectionDebugLineHeight = 3f)
+            float connectionDebugLineHeight = 3f,
+            bool generateHighways = true,
+            float highwayWidth = 18f,
+            float highwayThickness = 0.2f)
         {
             float startTime = Time.realtimeSinceStartup;
             // If requested, seed the Unity RNG so generation is deterministic
@@ -478,7 +484,7 @@ namespace FCG
 
                         if (connectSatteliteCities)
                         {
-                            int segments = ConnectCities(exitPositipon.position, satPosition, connectionStepOverride);
+                            int segments = ConnectCities(exitPositipon.position, satPosition, connectionStepOverride, generateHighways, highwayWidth, highwayThickness);
                             generationConnectionSegmentsCount += segments;
                             if (segments > 0)
                                 generatedLinks.Add(CreateNetworkLink(0, i + 1, exitPositipon.position, satPosition, segments, true));
@@ -493,7 +499,10 @@ namespace FCG
                             satelliteCloseLoop,
                             connectionStepOverride,
                             generatedLinks,
-                            1);
+                            1,
+                            generateHighways,
+                            highwayWidth,
+                            highwayThickness);
                 }
                 else
                 {
@@ -976,8 +985,13 @@ namespace FCG
             return 300f;
         }
 
-        private int ConnectCities(Vector3 startPosition, Vector3 endPosition, float connectionStepOverride = 0f)
+        private int ConnectCities(Vector3 startPosition, Vector3 endPosition, float connectionStepOverride = 0f, bool generateHighways = true, float highwayWidth = 18f, float highwayThickness = 0.2f)
         {
+            if (generateHighways)
+            {
+                return CreateHighwayConnection(startPosition, endPosition, connectionStepOverride, highwayWidth, highwayThickness);
+            }
+
             GameObject roadPrefab = GetConnectionPrefab();
             if (roadPrefab == null || cityMaker == null)
                 return 0;
@@ -1012,9 +1026,12 @@ namespace FCG
             int fromNodeId,
             int toNodeId,
             List<CityNetworkLink> generatedLinks,
-            bool toMainCity)
+            bool toMainCity,
+            bool generateHighways = true,
+            float highwayWidth = 18f,
+            float highwayThickness = 0.2f)
         {
-            int segments = ConnectCities(fromPosition, toPosition, connectionStepOverride);
+            int segments = ConnectCities(fromPosition, toPosition, connectionStepOverride, generateHighways, highwayWidth, highwayThickness);
             if (segments > 0 && generatedLinks != null)
                 generatedLinks.Add(CreateNetworkLink(fromNodeId, toNodeId, fromPosition, toPosition, segments, toMainCity));
 
@@ -1044,6 +1061,148 @@ namespace FCG
             };
         }
 
+        private int CreateHighwayConnection(Vector3 startPosition, Vector3 endPosition, float connectionStepOverride, float highwayWidth, float highwayThickness)
+        {
+            if (cityMaker == null)
+                return 0;
+
+            Vector3 delta = endPosition - startPosition;
+            delta.y = 0f;
+            float distance = delta.magnitude;
+            if (distance < 1f)
+                return 0;
+
+            float step = (connectionStepOverride > 1f) ? connectionStepOverride : Mathf.Max(250f, highwayWidth * 2f);
+            int segments = Mathf.Max(1, Mathf.CeilToInt(distance / step));
+
+            for (int i = 0; i < segments; i++)
+            {
+                Vector3 a = Vector3.Lerp(startPosition, endPosition, i / (float)segments);
+                Vector3 b = Vector3.Lerp(startPosition, endPosition, (i + 1f) / (float)segments);
+                CreateHighwaySegment(a, b, cityMaker.transform, highwayWidth, highwayThickness);
+            }
+
+            return segments;
+        }
+
+        private void CreateHighwaySegment(Vector3 startPosition, Vector3 endPosition, Transform parent, float highwayWidth, float highwayThickness)
+        {
+            Vector3 delta = endPosition - startPosition;
+            delta.y = 0f;
+            if (delta.magnitude < 0.001f)
+                return;
+
+            Vector3 center = (startPosition + endPosition) * 0.5f;
+            Quaternion rotation = Quaternion.LookRotation(delta.normalized, Vector3.up);
+
+            float halfLength = delta.magnitude * 0.5f;
+            float halfWidth = highwayWidth * 0.5f;
+            float shoulderWidth = Mathf.Max(1.5f, highwayWidth * 0.12f);
+            float laneMarkerWidth = Mathf.Max(0.18f, highwayWidth * 0.04f);
+
+            CreateHighwayMesh("Highway-Asphalt", center, rotation, parent, halfLength, halfWidth, 0.02f, new Color(0.19f, 0.20f, 0.23f, 1f));
+            CreateHighwayMesh("Highway-Shoulder", center, rotation, parent, halfLength + 0.02f, halfWidth + shoulderWidth, 0.005f, new Color(0.25f, 0.26f, 0.29f, 1f));
+
+            CreateLaneMarker(center, rotation, parent, halfLength - 0.5f, laneMarkerWidth, 0.03f, new Color(1f, 1f, 1f, 1f));
+            CreateLaneMarker(center, rotation, parent, halfLength - 1.4f, laneMarkerWidth, 0.03f, new Color(1f, 1f, 1f, 1f));
+
+            GameObject divider = new GameObject("Highway-Divider");
+            divider.transform.SetParent(parent, false);
+            divider.transform.position = center;
+            divider.transform.rotation = rotation;
+
+            MeshFilter dividerFilter = divider.AddComponent<MeshFilter>();
+            MeshRenderer dividerRenderer = divider.AddComponent<MeshRenderer>();
+            Mesh dividerMesh = new Mesh();
+
+            float dividerHalfWidth = Mathf.Max(0.08f, highwayWidth * 0.02f);
+            Vector3[] dVertices = new Vector3[4]
+            {
+                new Vector3(-dividerHalfWidth, 0.035f, -halfLength + 0.2f),
+                new Vector3( dividerHalfWidth, 0.035f, -halfLength + 0.2f),
+                new Vector3(-dividerHalfWidth, 0.035f,  halfLength - 0.2f),
+                new Vector3( dividerHalfWidth, 0.035f,  halfLength - 0.2f)
+            };
+            int[] dTriangles = new int[] { 0, 2, 1, 1, 2, 3 };
+            Vector2[] dUv = new Vector2[] { new Vector2(0,0), new Vector2(1,0), new Vector2(0,1), new Vector2(1,1) };
+            dividerMesh.vertices = dVertices;
+            dividerMesh.triangles = dTriangles;
+            dividerMesh.uv = dUv;
+            dividerMesh.RecalculateNormals();
+            dividerMesh.RecalculateBounds();
+            dividerFilter.sharedMesh = dividerMesh;
+
+            Material dividerMaterial = new Material(Shader.Find("Sprites/Default"));
+            dividerMaterial.color = new Color(0.92f, 0.92f, 0.92f, 1f);
+            dividerRenderer.sharedMaterial = dividerMaterial;
+        }
+
+        private void CreateHighwayMesh(string name, Vector3 center, Quaternion rotation, Transform parent, float halfLength, float halfWidth, float height, Color color)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = center;
+            go.transform.rotation = rotation;
+
+            MeshFilter filter = go.AddComponent<MeshFilter>();
+            MeshRenderer renderer = go.AddComponent<MeshRenderer>();
+            Mesh mesh = new Mesh();
+
+            Vector3[] vertices = new Vector3[4]
+            {
+                new Vector3(-halfWidth, height, -halfLength),
+                new Vector3( halfWidth, height, -halfLength),
+                new Vector3(-halfWidth, height,  halfLength),
+                new Vector3( halfWidth, height,  halfLength)
+            };
+            int[] triangles = new int[] { 0, 2, 1, 1, 2, 3 };
+            Vector2[] uv = new Vector2[] { new Vector2(0,0), new Vector2(1,0), new Vector2(0,1), new Vector2(1,1) };
+
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.uv = uv;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            filter.sharedMesh = mesh;
+
+            Material material = new Material(Shader.Find("Standard"));
+            material.color = color;
+            renderer.sharedMaterial = material;
+        }
+
+        private void CreateLaneMarker(Vector3 center, Quaternion rotation, Transform parent, float halfLength, float markWidth, float height, Color color)
+        {
+            GameObject go = new GameObject("Highway-Lane-Mark");
+            go.transform.SetParent(parent, false);
+            go.transform.position = center;
+            go.transform.rotation = rotation;
+
+            MeshFilter filter = go.AddComponent<MeshFilter>();
+            MeshRenderer renderer = go.AddComponent<MeshRenderer>();
+            Mesh mesh = new Mesh();
+
+            Vector3[] vertices = new Vector3[4]
+            {
+                new Vector3(-markWidth * 0.5f, height, -halfLength),
+                new Vector3( markWidth * 0.5f, height, -halfLength),
+                new Vector3(-markWidth * 0.5f, height,  halfLength),
+                new Vector3( markWidth * 0.5f, height,  halfLength)
+            };
+            int[] triangles = new int[] { 0, 2, 1, 1, 2, 3 };
+            Vector2[] uv = new Vector2[] { new Vector2(0,0), new Vector2(1,0), new Vector2(0,1), new Vector2(1,1) };
+
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.uv = uv;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            filter.sharedMesh = mesh;
+
+            Material material = new Material(Shader.Find("Sprites/Default"));
+            material.color = color;
+            renderer.sharedMaterial = material;
+        }
+
         private string BuildEdgeKey(int a, int b)
         {
             if (a < b) return a + "_" + b;
@@ -1057,7 +1216,10 @@ namespace FCG
             bool closeLoop,
             float connectionStepOverride,
             List<CityNetworkLink> generatedLinks = null,
-            int nodeIndexOffset = 0)
+            int nodeIndexOffset = 0,
+            bool generateHighways = true,
+            float highwayWidth = 18f,
+            float highwayThickness = 0.2f)
         {
             if (satelliteCenters == null || satelliteCenters.Count == 0)
                 return 0;
@@ -1078,7 +1240,10 @@ namespace FCG
                         i - 1 + nodeIndexOffset,
                         i + nodeIndexOffset,
                         generatedLinks,
-                        false);
+                        false,
+                        generateHighways,
+                        highwayWidth,
+                        highwayThickness);
                 }
 
                 if (closeLoop && satelliteCenters.Count > 2)
@@ -1089,7 +1254,10 @@ namespace FCG
                         satelliteCenters.Count - 1 + nodeIndexOffset,
                         nodeIndexOffset,
                         generatedLinks,
-                        false);
+                        false,
+                        generateHighways,
+                        highwayWidth,
+                        highwayThickness);
 
                 return createdSegments;
             }
@@ -1107,7 +1275,10 @@ namespace FCG
                             i + nodeIndexOffset,
                             j + nodeIndexOffset,
                             generatedLinks,
-                            false);
+                            false,
+                            generateHighways,
+                            highwayWidth,
+                            highwayThickness);
                     }
                 }
                 return createdSegments;
@@ -1149,7 +1320,10 @@ namespace FCG
                         i + nodeIndexOffset,
                         j + nodeIndexOffset,
                         generatedLinks,
-                        false);
+                        false,
+                        generateHighways,
+                        highwayWidth,
+                        highwayThickness);
                 }
             }
 
@@ -1161,7 +1335,10 @@ namespace FCG
                     satelliteCenters.Count - 1 + nodeIndexOffset,
                     nodeIndexOffset,
                     generatedLinks,
-                    false);
+                    false,
+                    generateHighways,
+                    highwayWidth,
+                    highwayThickness);
 
             return createdSegments;
         }

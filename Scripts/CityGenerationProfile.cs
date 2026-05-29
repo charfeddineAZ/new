@@ -40,6 +40,11 @@ namespace FCG
         [Range(0f, 20f)] public float connectionDebugLineHeight = 3f;
         [Range(0f,1f)] public float satelliteBuildingDensity = 1f;
 
+        [Header("Highways")]
+        public bool generateHighways = true;
+        [Range(8f, 40f)] public float highwayWidth = 18f;
+        [Range(0.05f, 1f)] public float highwayThickness = 0.2f;
+
         [Header("Buildings")]
         public bool withDownTownArea = true;
         [Range(50, 200)] public float downTownSize = 100;

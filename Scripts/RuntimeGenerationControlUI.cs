@@ -38,6 +38,9 @@ public class RuntimeGenerationControlUI : MonoBehaviour
         public bool createCityAnchors = true;
         public bool createConnectionDebugLines = false;
         public float connectionDebugLineHeight = 3f;
+        public bool generateHighways = true;
+        public float highwayWidth = 18f;
+        public float highwayThickness = 0.2f;
 
         public bool withDownTownArea = true;
         public float downTownSize = 100f;
@@ -270,6 +273,17 @@ public class RuntimeGenerationControlUI : MonoBehaviour
         }
 
         GUILayout.Space(8f);
+        GUILayout.Label("Highways", GUI.skin.box);
+        runtimeSample.generateHighways = GUILayout.Toggle(runtimeSample.generateHighways, "Generate Highways Between Cities");
+        if (runtimeSample.generateHighways)
+        {
+            runtimeSample.highwayWidth = GUILayout.HorizontalSlider(runtimeSample.highwayWidth, 8f, 40f);
+            GUILayout.Label("Highway Width: " + runtimeSample.highwayWidth.ToString("0.0"));
+            runtimeSample.highwayThickness = GUILayout.HorizontalSlider(runtimeSample.highwayThickness, 0.05f, 1f);
+            GUILayout.Label("Highway Thickness: " + runtimeSample.highwayThickness.ToString("0.00"));
+        }
+
+        GUILayout.Space(8f);
         GUILayout.Label("Buildings", GUI.skin.box);
         bool downtown = runtimeSample.IsDownTownAreaEnabled();
         bool newDowntown = GUILayout.Toggle(downtown, "With Downtown Area");
@@ -341,6 +355,9 @@ public class RuntimeGenerationControlUI : MonoBehaviour
         preset.createCityAnchors = runtimeSample.createCityAnchors;
         preset.createConnectionDebugLines = runtimeSample.createConnectionDebugLines;
         preset.connectionDebugLineHeight = runtimeSample.connectionDebugLineHeight;
+        preset.generateHighways = runtimeSample.generateHighways;
+        preset.highwayWidth = runtimeSample.highwayWidth;
+        preset.highwayThickness = runtimeSample.highwayThickness;
 
         preset.withDownTownArea = runtimeSample.IsDownTownAreaEnabled();
         preset.downTownSize = runtimeSample.downTownSize;
@@ -388,6 +405,9 @@ public class RuntimeGenerationControlUI : MonoBehaviour
         runtimeSample.createCityAnchors = preset.createCityAnchors;
         runtimeSample.createConnectionDebugLines = preset.createConnectionDebugLines;
         runtimeSample.connectionDebugLineHeight = Mathf.Clamp(preset.connectionDebugLineHeight, 0f, 20f);
+        runtimeSample.generateHighways = preset.generateHighways;
+        runtimeSample.highwayWidth = Mathf.Clamp(preset.highwayWidth, 8f, 40f);
+        runtimeSample.highwayThickness = Mathf.Clamp(preset.highwayThickness, 0.05f, 1f);
 
         runtimeSample.WithDownTownArea(preset.withDownTownArea);
         runtimeSample.downTownSize = Mathf.Clamp(preset.downTownSize, 50f, 200f);

@@ -37,6 +37,9 @@ namespace FCG
         public bool createConnectionDebugLines = false;
         public float connectionDebugLineHeight = 3f;
         [Range(0f,1f)] public float satelliteBuildingDensity = 1f;
+        public bool generateHighways = true;
+        [Range(8f, 40f)] public float highwayWidth = 18f;
+        [Range(0.05f, 1f)] public float highwayThickness = 0.2f;
 
         public void Normalize()
         {
@@ -47,6 +50,8 @@ namespace FCG
             satelliteCityMaxSize = Mathf.Clamp(satelliteCityMaxSize, 1, 4);
             connectionStepOverride = Mathf.Max(0f, connectionStepOverride);
             connectionDebugLineHeight = Mathf.Clamp(connectionDebugLineHeight, 0f, 20f);
+            highwayWidth = Mathf.Clamp(highwayWidth, 8f, 40f);
+            highwayThickness = Mathf.Clamp(highwayThickness, 0.05f, 1f);
 
             if (randomSatelliteMin.x > randomSatelliteMax.x)
             {
@@ -104,6 +109,9 @@ namespace FCG
             request.createConnectionDebugLines = profile.createConnectionDebugLines;
             request.connectionDebugLineHeight = profile.connectionDebugLineHeight;
             request.satelliteBuildingDensity = profile.satelliteBuildingDensity;
+            request.generateHighways = profile.generateHighways;
+            request.highwayWidth = profile.highwayWidth;
+            request.highwayThickness = profile.highwayThickness;
             request.randomSatelliteLayout = profile.randomSatelliteLayout;
             request.useSatelliteSeed = profile.useSatelliteSeed;
             request.satelliteSeed = profile.satelliteSeed;
